@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FakeGPS Photo - Geotag & Timestamp Annotator</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS & JS for Interactive Map Selection -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Clean custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
+    #map {
+      height: 150px;
+      border-radius: 4px;
+      width: 100%;
+    }
+    .leaflet-container {
+      background-color: #0f172a;
+    }
+    .custom-map-pin {
+      background: transparent;
+      border: none;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col antialiased bg-slate-950 text-slate-100 font-sans">
+
+  <!-- Header: Tight 44px -->
+  <header class="border-b border-slate-800 bg-slate-900 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 h-11 flex items-center justify-between">
+      
+      <!-- Brand -->
+      <div class="flex items-center space-x-2">
+        <div class="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+        </div>
+        <span class="text-xs font-semibold text-white tracking-tight">FakeGPS Photo</span>
+        <span class="text-[11px] text-slate-400 hidden sm:inline">&bull; Client-side annotator</span>
+      </div>
+
+      <!-- Stepper -->
+      <nav aria-label="Progress" class="flex items-center space-x-1 text-xs">
+        <button id="nav-step1-btn" class="flex items-center gap-1 px-2 py-0.5 rounded text-white bg-slate-800 border border-slate-700 transition-colors">
+          <span class="w-3.5 h-3.5 rounded bg-blue-600 text-white text-[10px] font-semibold flex items-center justify-center">1</span>
+          <span>Upload</span>
+        </button>
+        <span class="text-slate-600">/</span>
+        <button id="nav-step2-btn" class="flex items-center gap-1 px-2 py-0.5 rounded text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-40" disabled>
+          <span class="w-3.5 h-3.5 rounded bg-slate-800 text-slate-400 text-[10px] font-semibold flex items-center justify-center border border-slate-700">2</span>
+          <span>Data & Export</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-3 flex flex-col">
+
+    <!-- STEP 1: Upload View -->
+    <section id="step1-container" class="flex-1 flex flex-col justify-center items-center py-8">
+      <div class="max-w-md w-full space-y-4">
+        
+        <div class="text-center space-y-1">
+          <h1 class="text-xl font-bold text-white tracking-tight">
+            Annotate Photo with GPS & Timestamp
+          </h1>
+          <p class="text-xs text-slate-400">
+            Overlay coordinates, address, and timezone watermark directly onto your images.
+          </p>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="drop-zone"
+             class="border border-dashed border-slate-700 hover:border-slate-500 rounded-md p-6 sm:p-8 transition-colors cursor-pointer bg-slate-900 group flex flex-col items-center justify-center relative">
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/heic,image/gif" class="absolute inset-0 opacity-0 cursor-pointer z-10" />
+          
+          <div class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-slate-200 transition-colors mb-2.5 border border-slate-700">
+            <i data-lucide="upload" class="w-4 h-4"></i>
+          </div>
+
+          <h3 class="text-xs font-semibold text-white mb-0.5">
+            Choose an image or drop file here
+          </h3>
+          <p class="text-[11px] text-slate-400 mb-3 text-center">
+            JPEG, PNG, WEBP, GIF &bull; Original resolution preserved
+          </p>
+
+          <div class="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+            <i data-lucide="lock" class="w-3 h-3 text-slate-400"></i>
+            <span>100% Client-Side &bull; No uploads</span>
+          </div>
+        </div>
+
+        <!-- Demo button option -->
+        <div class="flex items-center justify-between text-xs text-slate-400 pt-0.5">
+          <span>Need a quick test?</span>
+          <button id="load-sample-btn" type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs transition-colors">
+            <i data-lucide="image" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span>Load sample photo</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- STEP 2: Configure & Preview View -->
+    <section id="step2-container" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+      
+      <!-- Left Column: Controls (5 cols) -->
+      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-md p-3 flex flex-col gap-3">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div>
+            <h2 class="text-xs font-semibold text-white">Stamp Configuration</h2>
+            <p id="image-meta-info" class="text-[11px] text-slate-400">Original: 1920 &times; 1080 px</p>
+          </div>
+          <button id="change-image-btn" type="button" class="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 transition-colors flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-3 h-3"></i>
+            <span>Change photo</span>
+          </button>
+        </div>
+
+        <!-- Section 1: Location & OSM Map -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-200">Location & OpenStreetMap</span>
+            <button id="geolocate-btn" type="button" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <i data-lucide="crosshair" class="w-3 h-3"></i>
+              <span>Use current location</span>
+            </button>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="flex flex-wrap items-center gap-1 text-[11px]">
+            <span class="text-slate-500 mr-0.5">Presets:</span>
+            <button type="button" class="preset-btn px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors" data-name="Times Square, New York" data-lat="40.7580" data-lng="-73.9855" data-tz="America/New_York">Times Square</button>
+            <button type="button" class="preset-btn px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors" data-name="Eiffel Tower, Paris, France" data-lat="48.8584" data-lng="2.2945" data-tz="Europe/Paris">Eiffel Tower</button>
+            <button type="button" class="preset-btn px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors" data-name="Shibuya Crossing, Tokyo, Japan" data-lat="35.6595" data-lng="139.7004" data-tz="Asia/Tokyo">Tokyo</button>
+            <button type="button" class="preset-btn px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors" data-name="Big Ben, London, UK" data-lat="51.5007" data-lng="-0.1246" data-tz="Europe/London">London</button>
+          </div>
+
+          <!-- Direct Embedded OSM Map -->
+          <div id="map-container" class="border border-slate-800 rounded overflow-hidden">
+            <div id="map"></div>
+            <div class="bg-slate-950 text-[10px] text-slate-400 px-2.5 py-0.5 flex items-center justify-between border-t border-slate-800">
+              <span class="flex items-center gap-1">
+                <i data-lucide="map" class="w-3 h-3 text-slate-400"></i>
+                <span>Click map to set pin</span>
+              </span>
+              <span id="reverse-status" class="text-blue-400 font-mono truncate max-w-[200px]"></span>
+            </div>
+          </div>
+
+          <!-- Coordinates Inputs -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-medium text-slate-300">Coordinates</span>
+              <button id="lookup-address-btn" type="button" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-medium transition-colors cursor-pointer" title="Look up address from these coordinates">
+                <i data-lucide="refresh-cw" class="w-2.5 h-2.5 text-blue-400"></i>
+                <span id="reverse-btn-label">Get address from coords</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="input-latitude" class="block text-[10px] text-slate-400 mb-0.5">Latitude (&deg;N/S)</label>
+                <input type="number" id="input-latitude" step="any" value="40.7580"
+                       class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
+              </div>
+              <div>
+                <label for="input-longitude" class="block text-[10px] text-slate-400 mb-0.5">Longitude (&deg;E/W)</label>
+                <input type="number" id="input-longitude" step="any" value="-73.9855"
+                       class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Address Input with Forward Geocode (Find on Map) -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="input-address" class="block text-[11px] font-medium text-slate-300">Address line</label>
+              <button id="geocode-address-btn" type="button" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium transition-colors cursor-pointer" title="Find coordinates and update map from this address">
+                <i data-lucide="search" class="w-3 h-3"></i>
+                <span id="geocode-btn-label">Find on map</span>
+              </button>
+            </div>
+            <textarea id="input-address" rows="2"
+                      placeholder="Type an address or place name and click Find on map..."
+                      class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none">Times Square, Manhattan, New York, NY 10036, United States</textarea>
+          </div>
+
+          <!-- Altitude & Note (Compact) -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="input-altitude" class="block text-[10px] font-medium text-slate-400 mb-0.5">Altitude</label>
+              <input type="text" id="input-altitude" value="18.2 m" placeholder="e.g. 15 m"
+                     class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
+            </div>
+            <div>
+              <label for="input-note" class="block text-[10px] font-medium text-slate-400 mb-0.5">Tag / Note</label>
+              <input type="text" id="input-note" value="GPS Map Camera" placeholder="e.g. Survey"
+                     class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Date, Time & Timezone -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-200">Date & Time</span>
+            <button id="set-now-btn" type="button" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <i data-lucide="clock" class="w-3 h-3"></i>
+              <span>Set to current time</span>
+            </button>
+          </div>
+
+          <div>
+            <label for="input-datetime" class="block text-[11px] font-medium text-slate-300 mb-0.5">Timestamp</label>
+            <input type="datetime-local" id="input-datetime" step="1"
+                   class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500 [color-scheme:dark]" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label for="input-timezone" class="block text-[11px] font-medium text-slate-300 mb-0.5">Timezone</label>
+              <select id="input-timezone" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500">
+                <option value="America/New_York">America/New_York</option>
+                <option value="America/Los_Angeles">America/Los_Angeles</option>
+                <option value="America/Chicago">America/Chicago</option>
+                <option value="Europe/London">Europe/London</option>
+                <option value="Europe/Paris">Europe/Paris</option>
+                <option value="Europe/Berlin">Europe/Berlin</option>
+                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                <option value="Asia/Singapore">Asia/Singapore</option>
+                <option value="Asia/Dubai">Asia/Dubai</option>
+                <option value="Asia/Kolkata">Asia/Kolkata</option>
+                <option value="Asia/Dhaka">Asia/Dhaka</option>
+                <option value="Australia/Sydney">Australia/Sydney</option>
+                <option value="UTC">UTC</option>
+                <option value="custom">Custom...</option>
+              </select>
+            </div>
+            <div>
+              <label for="input-tz-display" class="block text-[11px] font-medium text-slate-300 mb-0.5">Offset suffix</label>
+              <input type="text" id="input-tz-display" value="GMT-04:00" placeholder="GMT+00:00"
+                     class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Overlay Settings -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-200">Overlay Format</span>
+            <span class="text-[10px] text-slate-400 font-mono">Bottom 20% &bull; 40% Black &bull; Monospace</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 items-center">
+            <div>
+              <label for="stamp-size" class="block text-[11px] font-medium text-slate-300 mb-0.5">Text Scale</label>
+              <select id="stamp-size" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+                <option value="compact">Compact</option>
+                <option value="normal" selected>Normal</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5 pt-3">
+              <input type="checkbox" id="show-minimap" checked class="w-3.5 h-3.5 rounded text-blue-600 bg-slate-950 border-slate-700 focus:ring-0 cursor-pointer" />
+              <label for="show-minimap" class="text-xs text-slate-300 cursor-pointer select-none">
+                Include OSM map badge
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Download Action -->
+        <div class="pt-2 border-t border-slate-800 space-y-1.5">
+          <button id="download-btn" type="button"
+                  class="w-full py-2 px-3 rounded font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Download Annotated Image</span>
+          </button>
+          
+          <div class="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+            <span>Export resolution:</span>
+            <span id="export-res-label" class="font-mono text-slate-300">Original (100%)</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Live Preview (7 cols) -->
+      <div class="lg:col-span-7 flex flex-col gap-2 sticky top-14">
+        
+        <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-3 py-1.5">
+          <span class="text-xs font-medium text-slate-200">Live Preview</span>
+          <span class="text-[11px] text-slate-400">Updates in real time</span>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="bg-slate-950 border border-slate-800 rounded p-1.5 sm:p-2 flex items-center justify-center min-h-[380px]">
+          <canvas id="preview-canvas" class="max-w-full max-h-[75vh] object-contain rounded border border-slate-800"></canvas>
+          <div id="preview-spinner" class="hidden absolute inset-0 bg-slate-950/80 flex items-center justify-center z-10">
+            <span class="text-xs text-slate-300">Rendering...</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-2 bg-slate-900 text-[11px] text-slate-400">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between">
+      <span>FakeGPS Photo</span>
+      <span>100% client-side &bull; OpenStreetMap data</span>
+    </div>
+  </footer>
+
+  <!-- Main JavaScript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
