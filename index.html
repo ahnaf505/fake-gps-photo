@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FakeGPS Photo - Geotag & Timestamp Annotator</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Leaflet CSS & JS for Interactive Map Selection -->
@@ -35,6 +38,12 @@
     .custom-map-pin {
       background: transparent;
       border: none;
+    }
+    .custom-map-pin svg {
+      display: block;
+      margin: 0;
+      padding: 0;
+      transform: none !important;
     }
   </style>
 </head>
@@ -120,11 +129,10 @@
     </section>
 
     <!-- STEP 2: Configure & Preview View -->
-    <section id="step2-container" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+    <section id="step2-container" class="hidden flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
       
-      <!-- Left Column: Controls (5 cols) -->
-      <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-md p-3 flex flex-col gap-3">
-        
+      <!-- Left Column: Controls (5 cols on tablet/desktop, stacked on mobile) -->
+      <div class="sm:col-span-5 bg-slate-900 border border-slate-800 rounded-md p-3 flex flex-col gap-3">
         <!-- Header -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-800">
           <div>
@@ -205,18 +213,11 @@
                       class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none">Times Square, Manhattan, New York, NY 10036, United States</textarea>
           </div>
 
-          <!-- Altitude & Note (Compact) -->
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label for="input-altitude" class="block text-[10px] font-medium text-slate-400 mb-0.5">Altitude</label>
-              <input type="text" id="input-altitude" value="18.2 m" placeholder="e.g. 15 m"
-                     class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
-            </div>
-            <div>
-              <label for="input-note" class="block text-[10px] font-medium text-slate-400 mb-0.5">Tag / Note</label>
-              <input type="text" id="input-note" value="GPS Map Camera" placeholder="e.g. Survey"
-                     class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500" />
-            </div>
+          <!-- Altitude (Compact) -->
+          <div>
+            <label for="input-altitude" class="block text-[10px] font-medium text-slate-400 mb-0.5">Altitude (optional)</label>
+            <input type="text" id="input-altitude" value="18.2 m" placeholder="e.g. 15 m"
+                   class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono" />
           </div>
         </div>
 
@@ -273,11 +274,12 @@
 
           <div class="grid grid-cols-2 gap-2 items-center">
             <div>
-              <label for="stamp-size" class="block text-[11px] font-medium text-slate-300 mb-0.5">Text Scale</label>
+              <label for="stamp-size" class="block text-[11px] font-medium text-slate-300 mb-0.5">Text Size</label>
               <select id="stamp-size" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
-                <option value="compact">Compact</option>
-                <option value="normal" selected>Normal</option>
-                <option value="large">Large</option>
+                <option value="small">Small (~26px)</option>
+                <option value="normal" selected>Normal (~32px)</option>
+                <option value="medium">Medium (~38px)</option>
+                <option value="large">Large (~44px)</option>
               </select>
             </div>
             <div class="flex items-center gap-1.5 pt-3">
@@ -306,8 +308,8 @@
       </div>
 
       <!-- Right Column: Live Preview (7 cols) -->
-      <div class="lg:col-span-7 flex flex-col gap-2 sticky top-14">
-        
+      <!-- Right Column: Live Preview (7 cols on tablet/desktop, sticky) -->
+      <div class="sm:col-span-7 flex flex-col gap-2 sticky top-12">
         <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-3 py-1.5">
           <span class="text-xs font-medium text-slate-200">Live Preview</span>
           <span class="text-[11px] text-slate-400">Updates in real time</span>
@@ -336,6 +338,6 @@
   </footer>
 
   <!-- Main JavaScript Logic -->
-  <script src="app.js"></script>
+  <script src="app.js?v=bigger_font_v7"></script>
 </body>
 </html>

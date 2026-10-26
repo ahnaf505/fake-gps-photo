@@ -49,7 +49,6 @@ const dom = {
   inputLng: document.getElementById('input-longitude'),
   inputAddress: document.getElementById('input-address'),
   inputAltitude: document.getElementById('input-altitude'),
-  inputNote: document.getElementById('input-note'),
   lookupAddressBtn: document.getElementById('lookup-address-btn'),
   geocodeAddressBtn: document.getElementById('geocode-address-btn'),
   mapContainer: document.getElementById('map-container'),
@@ -255,10 +254,6 @@ function initEventListeners() {
   });
   dom.inputAltitude.addEventListener('input', (e) => {
     state.altitude = e.target.value;
-    scheduleRender();
-  });
-  dom.inputNote.addEventListener('input', (e) => {
-    state.note = e.target.value;
     scheduleRender();
   });
 
@@ -557,11 +552,11 @@ function initLeafletMapIfNeeded() {
   const lat = state.coords.lat;
   const lng = state.coords.lng;
 
-  // Custom SVG Map Pin that never fails or 404s
+  // Custom SVG Map Pin (pixel-perfect alignment with clicked point at bottom tip [12, 32])
   const pinIcon = L.divIcon({
     className: 'custom-map-pin',
     html: `
-      <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: translate(-12px, -30px);">
+      <svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
         <path d="M12 0C5.37 0 0 5.37 0 12C0 20.25 12 32 12 32C12 32 24 20.25 24 12C24 5.37 18.63 0 12 0Z" fill="#ef4444"/>
         <circle cx="12" cy="11" r="4.5" fill="#ffffff"/>
       </svg>
@@ -569,7 +564,6 @@ function initLeafletMapIfNeeded() {
     iconSize: [24, 32],
     iconAnchor: [12, 32]
   });
-
   if (!state.mapInitialized) {
     state.leafletMap = L.map('map', {
       zoomControl: true,
@@ -916,7 +910,7 @@ function drawStamp(ctx, width, height) {
   const dateTimeFormatted = `${dtStr} ${tzSuffix}`;
   const address = state.address || 'Unknown Location';
   const altitude = state.altitude ? `ALT: ${state.altitude}` : '';
-  const note = state.note ? `TAG: ${state.note}` : '';
+
 
   // 4. Tight layout metrics inside banner
   const padX = Math.round(Math.max(10, width * 0.015));
@@ -938,21 +932,22 @@ function drawStamp(ctx, width, height) {
   // Monospace font stack
   const monoFont = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
 
-  // Scale multiplier
+  // Scale multiplier supporting small, normal, medium, large
   let scaleMult = 1.0;
-  if (state.scale === 'compact') scaleMult = 0.85;
-  if (state.scale === 'large') scaleMult = 1.15;
+  if (state.scale === 'small' || state.scale === 'compact') scaleMult = 0.82;
+  else if (state.scale === 'normal') scaleMult = 1.0;
+  else if (state.scale === 'medium') scaleMult = 1.18;
+  else if (state.scale === 'large') scaleMult = 1.38;
 
-  // Text content lines (Tight formatting)
+  // Text content lines (No tag)
   const line1 = `GPS:  ${coordDecimal}  [${coordDMS}]`;
   const metaParts = [`TIME: ${dateTimeFormatted}`];
   if (altitude) metaParts.push(altitude);
-  if (note) metaParts.push(note);
   const line3 = metaParts.join('  |  ');
 
-  // Estimate initial tight font size (lineHeight = fontSize * 1.16 for compact density)
-  let fontSize = Math.max(10, Math.floor((availHeight / 3.7) * scaleMult));
-  let lineHeight = Math.floor(fontSize * 1.16);
+  // Prominent, clearly legible font size (~32px on 1920w baseline)
+  let fontSize = Math.max(12, Math.round(width * 0.0165 * scaleMult));
+  let lineHeight = Math.round(fontSize * 1.28);
 
   ctx.font = `600 ${fontSize}px ${monoFont}`;
 
@@ -961,40 +956,37 @@ function drawStamp(ctx, width, height) {
   let addressLines = wrapText(ctx, `${addrPrefix}${address}`, maxTextWidth);
   if (addressLines.length === 0) addressLines = [`${addrPrefix}${address}`];
 
-  // Refine font size and line height so all lines fit within the 20% banner without overflowing
+  // Refine only if lines overflow available height
   const totalLines = 1 + addressLines.length + 1;
   const totalTextHeight = totalLines * lineHeight;
   if (totalTextHeight > availHeight) {
     lineHeight = Math.floor(availHeight / totalLines);
-    fontSize = Math.floor(lineHeight * 0.80);
+    fontSize = Math.floor(lineHeight * 0.75);
     ctx.font = `600 ${fontSize}px ${monoFont}`;
   }
 
-  // Tight vertical centering inside banner
+  // Vertical centering inside banner
   let currentY = bannerY + Math.round((bannerHeight - (totalLines * lineHeight)) / 2) + Math.round(fontSize * 0.95);
-
-  // 5. Draw text using monospace font with high-contrast text shadow
+  // 5. Draw text using monospace font in pure white with high-contrast text shadow
   ctx.save();
   ctx.font = `600 ${fontSize}px ${monoFont}`;
+  ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
   ctx.shadowBlur = Math.max(2, Math.round(fontSize * 0.12));
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
 
-  // Line 1: Coordinates (Crisp white)
-  ctx.fillStyle = '#ffffff';
+  // Line 1: Coordinates (Pure white)
   ctx.fillText(line1, contentStartX, currentY);
 
-  // Line 2: Address (wrapped lines)
-  ctx.fillStyle = '#cbd5e1';
+  // Line 2: Address (Pure white)
   for (const aLine of addressLines) {
     currentY += lineHeight;
     ctx.fillText(aLine, contentStartX, currentY);
   }
 
-  // Line 3: Timestamp & Timezone
+  // Line 3: Timestamp & Timezone (Pure white)
   currentY += lineHeight;
-  ctx.fillStyle = '#94a3b8';
   ctx.fillText(line3, contentStartX, currentY);
 
   ctx.restore();
