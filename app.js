@@ -20,7 +20,7 @@ const state = {
   datetime: '',
   timezoneName: 'America/New_York',
   timezoneDisplay: 'GMT-04:00',
-  scale: 'normal',
+  userFontSize: 40,
   showMinimap: true,
   leafletMap: null,
   mapMarker: null,
@@ -60,7 +60,8 @@ const dom = {
   inputTzDisplay: document.getElementById('input-tz-display'),
   
   // Style Elements
-  stampSize: document.getElementById('stamp-size'),
+  stampSizeSlider: document.getElementById('stamp-size-slider'),
+  fontSizeLabel: document.getElementById('font-size-label'),
   showMinimap: document.getElementById('show-minimap'),
   
   // Preview & Export
@@ -373,12 +374,16 @@ function initEventListeners() {
     scheduleRender();
   });
 
-  // Style Settings
-  dom.stampSize.addEventListener('change', (e) => {
-    state.scale = e.target.value;
-    scheduleRender();
-  });
-
+  // Font Size Slider
+  if (dom.stampSizeSlider) {
+    dom.stampSizeSlider.addEventListener('input', (e) => {
+      state.userFontSize = parseInt(e.target.value, 10) || 40;
+      if (dom.fontSizeLabel) {
+        dom.fontSizeLabel.textContent = `${state.userFontSize}px`;
+      }
+      scheduleRender();
+    });
+  }
   dom.showMinimap.addEventListener('change', (e) => {
     state.showMinimap = e.target.checked;
     scheduleRender();
@@ -889,8 +894,9 @@ function renderPreview() {
  * Contains address, coordinates, and date/time with timezone.
  */
 function drawStamp(ctx, width, height) {
-  // 1. Calculate banner dimensions: exact 20% of picture height from the bottom
-  const bannerHeight = Math.round(height * 0.20);
+  // 1. Hardcoded overlay height: 210px (scaled by width/1920 baseline for export fidelity)
+  const HARDCODED_BANNER_HEIGHT = 210;
+  const bannerHeight = Math.round(HARDCODED_BANNER_HEIGHT * (width / 1920));
   const bannerY = height - bannerHeight;
   const bannerWidth = width;
 
@@ -932,23 +938,16 @@ function drawStamp(ctx, width, height) {
   // Monospace font stack
   const monoFont = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace';
 
-  // Scale multiplier supporting small, normal, medium, large
-  let scaleMult = 1.0;
-  if (state.scale === 'small' || state.scale === 'compact') scaleMult = 0.85;
-  else if (state.scale === 'normal') scaleMult = 1.0;
-  else if (state.scale === 'medium') scaleMult = 1.18;
-  else if (state.scale === 'large') scaleMult = 1.38;
-
   // Text content lines (No tag)
   const line1 = `GPS:  ${coordDecimal}  [${coordDMS}]`;
   const metaParts = [`TIME: ${dateTimeFormatted}`];
   if (altitude) metaParts.push(altitude);
   const line3 = metaParts.join('  |  ');
 
-  // Large, prominent font size filling the 20% overlay comfortably (~46px on 1080p, ~35px on preview)
-  let fontSize = Math.max(14, Math.round((bannerHeight / 4.6) * scaleMult));
-  let lineHeight = Math.round(fontSize * 1.18);
-
+  // Baseline font size: default 40px on 1920w baseline (adjustable via slider from 20px to 60px)
+  const targetPx = state.userFontSize || 40;
+  let fontSize = Math.max(12, Math.round((targetPx / 1920) * width));
+  let lineHeight = Math.round(fontSize * 1.25);
   ctx.font = `600 ${fontSize}px ${monoFont}`;
 
   // Word-wrap address line
@@ -961,13 +960,12 @@ function drawStamp(ctx, width, height) {
   const totalTextHeight = totalLines * lineHeight;
   if (totalTextHeight > availHeight) {
     lineHeight = Math.floor(availHeight / totalLines);
-    fontSize = Math.floor(lineHeight * 0.80);
+    fontSize = Math.floor(lineHeight * 0.78);
     ctx.font = `600 ${fontSize}px ${monoFont}`;
   }
 
   // Vertical centering inside banner
   let currentY = bannerY + Math.round((bannerHeight - (totalLines * lineHeight)) / 2) + Math.round(fontSize * 0.95);
-  ctx.save();
   ctx.font = `600 ${fontSize}px ${monoFont}`;
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
