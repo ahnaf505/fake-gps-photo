@@ -934,7 +934,7 @@ function drawStamp(ctx, width, height) {
 
   // Scale multiplier supporting small, normal, medium, large
   let scaleMult = 1.0;
-  if (state.scale === 'small' || state.scale === 'compact') scaleMult = 0.82;
+  if (state.scale === 'small' || state.scale === 'compact') scaleMult = 0.85;
   else if (state.scale === 'normal') scaleMult = 1.0;
   else if (state.scale === 'medium') scaleMult = 1.18;
   else if (state.scale === 'large') scaleMult = 1.38;
@@ -945,9 +945,9 @@ function drawStamp(ctx, width, height) {
   if (altitude) metaParts.push(altitude);
   const line3 = metaParts.join('  |  ');
 
-  // Prominent, clearly legible font size (~32px on 1920w baseline)
-  let fontSize = Math.max(12, Math.round(width * 0.0165 * scaleMult));
-  let lineHeight = Math.round(fontSize * 1.28);
+  // Large, prominent font size filling the 20% overlay comfortably (~46px on 1080p, ~35px on preview)
+  let fontSize = Math.max(14, Math.round((bannerHeight / 4.6) * scaleMult));
+  let lineHeight = Math.round(fontSize * 1.18);
 
   ctx.font = `600 ${fontSize}px ${monoFont}`;
 
@@ -961,13 +961,12 @@ function drawStamp(ctx, width, height) {
   const totalTextHeight = totalLines * lineHeight;
   if (totalTextHeight > availHeight) {
     lineHeight = Math.floor(availHeight / totalLines);
-    fontSize = Math.floor(lineHeight * 0.75);
+    fontSize = Math.floor(lineHeight * 0.80);
     ctx.font = `600 ${fontSize}px ${monoFont}`;
   }
 
   // Vertical centering inside banner
   let currentY = bannerY + Math.round((bannerHeight - (totalLines * lineHeight)) / 2) + Math.round(fontSize * 0.95);
-  // 5. Draw text using monospace font in pure white with high-contrast text shadow
   ctx.save();
   ctx.font = `600 ${fontSize}px ${monoFont}`;
   ctx.fillStyle = '#ffffff';
